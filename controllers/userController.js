@@ -9,6 +9,22 @@ const getAllUsers = async (_, res) => {
     return res.json(users);
 }
 
+const getUserById = async (req, res) => {
+    const {id} = req.params
+    if(!id){
+        return res.status(400).json({
+            message: "User ID must be provided."
+        })
+    }
+
+    const user = await User.findById(id).select('-password').lean();
+    if(!user){
+        return res.status(400).json({message: `No user with ID ${id} was found.`})
+    }
+    return res.json({
+        ...user
+    });
+}
 
 const createNewUser = async (req, res) => {
     const {password, email, name, surname} = req.body;
@@ -19,7 +35,7 @@ const createNewUser = async (req, res) => {
     }
 
     //Check for duplicates
-    let duplicate = await User.findOne({email}).lean().exec()
+    const duplicate = await User.findOne({email}).lean().exec()
     if(duplicate){
         return res.status(409).json({messsage: "This email is already assigned to an existing user."})
     }
@@ -34,9 +50,8 @@ const createNewUser = async (req, res) => {
     }
 
     //Save new user
-    const user = await User.create(userObject)
+    await User.create(userObject)
     res.status(201).json({
-        ...user,
         message: `New user ${email} was created!`
     })
     }
@@ -46,11 +61,17 @@ const createNewUser = async (req, res) => {
 
 }
 
-const updateUserPassword = async (req, res) => {
-    const {id, password, name, surname} = req.body;
+const updateUser = async (req, res) => {
+    const {id} = req.params;
+    const {password, name, surname, email} = req.body;
 
     if(!id && !password && !name && !surname){
         return res.status(400).json({message: "The new password, surname, or name must be provided alongside user ID."})
+    }
+    if(email){
+        return res.status(400).json({
+            message: "The email address cannot be changed."
+        })
     }
 
     const user = await User.findById(id).exec()
@@ -69,14 +90,13 @@ const updateUserPassword = async (req, res) => {
     }
 
     const updatedUser = await user.save();
-    return res,json({
-        ...updatedUser,
-        message: `${user.email} has been updated`
+    return res.json({
+        message: `User ${updatedUser.email} has been updated.`
     })
 }
 
 const deleteUser = async (req, res) => {
-    const {id} = req.body
+    const {id} = req.params
 
     if(!id){
         return res.status(400).json({message: "User ID Required."});
@@ -90,13 +110,15 @@ const deleteUser = async (req, res) => {
 
     const result = await user.deleteOne();
 
-    const reply = `Username ${result.username} with ID ${result._id} has been deleted`
+    const reply = `User ${result.email} with ID ${result._id} has been deleted.`
 
     return res.json({message: reply})
 }
 
 module.exports = {
     getAllUsers,
+    getUserById,
     createNewUser,
-    deleteUser
+    deleteUser,
+    updateUser
 }

@@ -25,6 +25,8 @@ const ClientSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: "User"
     }
+}, {
+    collection: "Client"
 })
 
 const ClientModel = mongoose.model("Client", ClientSchema);

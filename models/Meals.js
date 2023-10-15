@@ -32,6 +32,8 @@ const MealSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: "Client"
     }
+}, {
+    collection: "Meal"
 })
 
 const MealModel = mongoose.model("Meal", MealSchema);
