@@ -28,6 +28,10 @@ const MealSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    client: {
+        type: mongoose.Schema.ObjectId,
+        ref: "Client"
+    }
 })
 
 const MealModel = mongoose.model("Meal", MealSchema);

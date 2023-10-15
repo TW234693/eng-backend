@@ -16,12 +16,7 @@ const UserSchema = new mongoose.Schema({
     surname: {
         type: String,
         required: true,
-    },
-    role: {
-        type: String,
-        required: true,
-    },
-    clients: [{type: mongoose.Schema.ObjectId, ref: "Client"}]
+    }
 })
 
 const UserModel = mongoose.model("User", UserSchema);

@@ -21,7 +21,10 @@ const ClientSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    meals: [{type: mongoose.Schema.ObjectId, ref: "Meal"}]
+    user: {
+        type: mongoose.Schema.ObjectId,
+        ref: "User"
+    }
 })
 
 const ClientModel = mongoose.model("Client", ClientSchema);
