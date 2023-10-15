@@ -17,10 +17,6 @@ const ClientSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    role: {
-        type: String,
-        required: true,
-    },
     user: {
         type: mongoose.Schema.ObjectId,
         ref: "User"

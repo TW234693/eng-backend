@@ -2,8 +2,8 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3500;
 const connectDB = require('./config/connectDB');
-const mongoose = require('mongoose');
 const userRouter = require('./routes/userRouter')
+const clientRouter = require('./routes/clientRouter')
 
 require('dotenv').config();
 connectDB();
@@ -11,6 +11,7 @@ connectDB();
 app.use(express.json())
 
 app.use('/users', userRouter)
+app.use('/clients', clientRouter)
 
 app.all('*', (req, res) => {
     res.status(404);

@@ -1,4 +1,5 @@
 const User = require("../models/Users")
+const Client = require("../models/Clients")
 const bcrypt = require('bcrypt')
 
 const getAllUsers = async (_, res) => {
@@ -26,7 +27,29 @@ const getUserById = async (req, res) => {
     });
 }
 
-const createNewUser = async (req, res) => {
+const getUserClients = async (req, res) => {
+    const {id} = req.params
+    if(!id){
+        return res.status(400).json({
+            message: "User ID must be provided."
+        })
+    }
+
+    const user = await User.findById(id).select('-password').lean();
+    if(!user){
+        return res.status(400).json({message: `No user with ID ${id} was found.`})
+    }
+
+    const clients = await Client.find({user: user._id}).select('-password').lean();
+    console.log(clients)
+    if(!clients || clients.length===0){
+        return res.status(400).json({message: "This user has no clients"})
+    }
+
+    return res.status(200).json({clients})
+}
+
+const createUser = async (req, res) => {
     const {password, email, name, surname} = req.body;
 
     // Confirm data
@@ -118,7 +141,8 @@ const deleteUser = async (req, res) => {
 module.exports = {
     getAllUsers,
     getUserById,
-    createNewUser,
+    getUserClients,
+    createUser,
     deleteUser,
     updateUser
 }
