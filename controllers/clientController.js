@@ -3,17 +3,17 @@ const Meal = require("../models/Meals")
 const User = require("../models/Users")
 const bcrypt = require('bcrypt')
 
-const getClientById = async (req, res) => {
-    const {id} = req.params
-    if(!id){
+const getClientByEmail = async (req, res) => {
+    const {email} = req.params
+    if(!email){
         return res.status(400).json({
-            message: "Client ID must be provided."
+            message: "Client email must be provided."
         })
     }
 
-    const client = await Client.findById(id).select('-password').lean();
+    const client = await Client.findOne({email: email}).select('-password').lean();
     if(!client){
-        return res.status(400).json({message: `No client with ID ${id} was found.`})
+        return res.status(400).json({message: `No client with email ${email} was found.`})
     }
     return res.json({
         ...client
@@ -21,16 +21,16 @@ const getClientById = async (req, res) => {
 }
 
 const getClientMeals = async (req, res) => {
-    const {id} = req.params
-    if(!id){
+    const {email} = req.params
+    if(!email){
         return res.status(400).json({
-            message: "Client ID must be provided."
+            message: "Client email must be provided."
         })
     }
 
-    const client = await Client.findById(id).select('-password').lean();
+    const client = await Client.findOne({email: email}).select('-password').lean();
     if(!client){
-        return res.status(400).json({message: `No client with ID ${id} was found.`})
+        return res.status(400).json({message: `No client with email ${email} was found.`})
     }
 
     const clientMeals = await Meal.find({client: client._id}).lean()
@@ -44,7 +44,6 @@ const getClientMeals = async (req, res) => {
 }
 
 const createClient = async (req, res) => {
-    const {userId} = req.params;
     const {password, email, name, surname} = req.body;
 
     // Confirm data
@@ -52,21 +51,10 @@ const createClient = async (req, res) => {
         return res.status(400).json({message: "All fields are required."});
     }
 
-    if(!userId){
-        return res.status(400).json({
-            message: "User ID must be provided."
-        })
-    }
-
-    const user = await User.findById(userId).select('-password').lean();
-    if(!user){
-        return res.status(400).json({message: `No user with ID ${userId} was found.`})
-    }
-
     //Check for duplicates
     const duplicate = await Client.findOne({email}).lean().exec()
     if(duplicate){
-        return res.status(409).json({messsage: "This email is already assigned to an existing client."})
+        return res.status(409).json({messsage: `Email ${email} is already assigned to an existing client.`})
     }
 
     try{
@@ -75,14 +63,13 @@ const createClient = async (req, res) => {
         email,
         password: hashPassowrd,
         name,
-        surname,
-        user: userId
+        surname
     }
 
     //Save new client
     await Client.create(clientObject)
     res.status(201).json({
-        message: `New client ${email} was created!`
+        message: `New client ${clientObject.email} was created!`
     })
     }
     catch(error){
@@ -92,19 +79,14 @@ const createClient = async (req, res) => {
 }
 
 const updateClient = async (req, res) => {
-    const {id} = req.params;
-    const {password, name, surname, email} = req.body;
+    const {email} = req.params;
+    const {password, name, surname} = req.body;
 
-    if(email){
-        return res.status(400).json({
-            message: "The email address cannot be changed."
-        })
-    }
-    if(!id && !password && !name && !surname){
-        return res.status(400).json({message: "The new password, surname, or name must be provided alongside user ID."})
+    if(!email && !password && !name && !surname){
+        return res.status(400).json({message: "The new password, surname, or name must be provided alongside client email."})
     }
 
-    const client = await Client.findById(id).exec()
+    const client = await Client.findOne({email: email}).exec()
     if(!client){
         res.status(400).json({message: "Client not found."})
     }
@@ -126,13 +108,13 @@ const updateClient = async (req, res) => {
 }
 
 const deleteClient = async (req, res) => {
-    const {id} = req.params
+    const {email} = req.params
 
-    if(!id){
-        return res.status(400).json({message: "Client ID Required."});
+    if(!email){
+        return res.status(400).json({message: "Client email required."});
     }
 
-    const client = await Client.findById(id).exec();
+    const client = await Client.findOne({email: email}).exec();
 
     if(!client){
         return res.status(400).json({message: "Client not found."})
@@ -145,10 +127,32 @@ const deleteClient = async (req, res) => {
     return res.json({message: reply})
 }
 
+const unassignClient = async (req, res) => {
+    const {email} = req.params
+
+    if(!email){
+        return res.status(400).json({message: "Client email required."});
+    }
+
+    const client = await Client.findOne({email: email}).exec();
+
+    if(!client){
+        return res.status(400).json({message: "Client not found."})
+    }
+
+    client.user = undefined;
+    const unassignedClient = await client.save();
+
+    return res.json({
+        message: `Client ${unassignedClient.email} has been unassigned and can now be assigned to a different user.`
+    })
+}
+
 module.exports = {
-    getClientById,
+    getClientByEmail,
     getClientMeals,
     createClient,
     updateClient,
     deleteClient,
+    unassignClient
 }

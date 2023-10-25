@@ -4,6 +4,7 @@ const PORT = process.env.PORT || 3500;
 const connectDB = require('./config/connectDB');
 const userRouter = require('./routes/userRouter')
 const clientRouter = require('./routes/clientRouter')
+const mealRouter = require('./routes/mealRouter')
 
 require('dotenv').config();
 connectDB();
@@ -12,6 +13,7 @@ app.use(express.json())
 
 app.use('/users', userRouter)
 app.use('/clients', clientRouter)
+app.use('/meals', mealRouter)
 
 app.all('*', (req, res) => {
     res.status(404);

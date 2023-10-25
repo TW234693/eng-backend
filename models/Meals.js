@@ -10,18 +10,30 @@ const MealSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    ingredients: [{
-        name: {
-            type: String,
-            required: true,
-        },
-        quantity: {
-            type: Number,
-            required: true,
-        },
-    }],
+    ingredients: {
+        type: [{
+            name: {
+                type: String,
+                required: true,
+            },
+            quantityGrams: {
+                type: Number,
+                required: true,
+            },
+            fatGrams: {
+                type: Number
+            },
+            carbohydrateGrams: {
+                type: Number
+            },
+            proteinGrams: {
+                type: Number
+            }
+        }],
+        validate: [(val) => val.length > 0, "A meal must contain at least 1 ingredient"]
+    },
     minutesCookingTime: {
-        type: String,
+        type: Number,
         required: true,
     },
     mealDate: {
