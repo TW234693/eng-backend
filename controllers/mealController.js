@@ -1,7 +1,7 @@
 const User = require("../models/Users")
 const Client = require("../models/Clients")
 const Meal = require("../models/Meals")
-const bcrypt = require('bcrypt')
+const ObjectId = require('mongoose').Types.ObjectId;
 
 const getMealById = async (req, res) => {
     const {id} = req.params;
@@ -10,19 +10,35 @@ const getMealById = async (req, res) => {
             message: "Meal ID must be provided"
         })
     }
-    try{
-        const meal = await Meal.findById(id).lean()
-        if(!meal){
-            return res.status(400).json({message: `No meal with ID ${id} was found.`})
-        }
-
-        return res.status(200).json({
-            ...meal
-        });
+    if(!ObjectId.isValid(id)){
+        return res.status(400).json({
+            message: `${id} isn't a valid ID.`
+        })
     }
-    catch(error){
+
+    const meal = await Meal.findById(id).lean()
+    if(!meal){
         return res.status(400).json({message: `No meal with ID ${id} was found.`})
     }
+    if(!meal.client){
+        return res.status(500).json({
+            message: `Meal ${meal.name} doesn't have a client assigned.`
+        })
+    }
+    if(!ObjectId.isValid(meal.client)){
+        return res.status(500).json({
+            message: `${meal.client} isn't a valid meal client ID.`
+        })
+    }
+
+    const mealClient = await Client.findById(meal.client).lean();
+    if(!mealClient){
+        return res.status(500).json({message: `The client who is assigned to the meal ${meal.name} couldn't be found`})
+    }
+    
+    return res.status(200).json({
+        ...meal
+    });
 }
 
 
@@ -34,9 +50,33 @@ const createMeal = async (req, res) => {
         return res.status(400).json({message: "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided."});
     }
 
-    const client = await Client.findOne({email: clientEmail}).lean()
-    if(!client){
-        return res.status(409).json({messsage: `Client with email ${clientEmail} was not found.`})
+    const mealClient = await Client.findOne({email: clientEmail}).lean()
+    if(!mealClient){
+        return res.status(400).json({
+            messsage: `Client with email ${clientEmail} was not found.`
+        })
+    }
+    if(!mealClient.user){
+        return res.status(400).json({
+            message: `Client ${mealClient.email} doesn't have a user assigned.`
+        })
+    }
+    if(!ObjectId.isValid(mealClient.user)){
+        return res.status(500).json({
+            message: `${mealClient.user} isn't a valid meal client user ID.`
+        })
+    }
+
+    const mealClientUser = await User.findById(mealClient.user).lean()
+    if(!mealClientUser){
+        return res.status(500).json({
+            message: `User to which the client ${mealClient.email} is assigned to doesn't exist.`
+        })
+    }
+    if(req.user !== mealClientUser.email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })
     }
 
     const newMeal = {
@@ -46,7 +86,7 @@ const createMeal = async (req, res) => {
         minutesCookingTime,
         mealDate,
         ingredients,
-        client: client._id
+        client: mealClient._id
     }
 
     await Meal.create(newMeal)
@@ -70,18 +110,54 @@ const updateMeal = async (req, res) => {
             message: "Meal ID must be provided"
         })
     }
-
-    let meal;
-    try{
-        meal = await Meal.findById(id).exec();
-        if(!meal){
-            return res.status(400).json({
-                message: `Meal with ID ${id} wasn not found.`
-            })
-        }
+    if(!ObjectId.isValid(id)){
+        return res.status(400).json({
+            message: `${id} isn't a valid ID.`
+        })
     }
-    catch(error){
-        return res.status(400).json({message: `No meal with ID ${id} was found.`})
+
+    const meal = await Meal.findById(id).exec();
+    if(!meal){
+        return res.status(400).json({
+            message: `Meal with ID ${id} was not found.`
+        })
+    }
+    if(!meal.client){
+        return res.status(500).json({
+            message: `Meal ${meal.name} doesn't have a client assigned.`
+        })
+    }
+    if(!ObjectId.isValid(meal.client)){
+        return res.status(500).json({
+            message: `${meal.client} isn't a valid meal client ID.`
+        })
+    }
+
+    const mealClient = await Client.findById(meal.client).exec();
+    if(!mealClient){
+        return res.status(500).json({
+            message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`
+        })
+    }
+    if(!mealClient.user){
+        return res.status(400).json({
+            message: `Client ${mealClient.email} doesn't have a user assigned.`
+        })
+    }
+    if(!ObjectId.isValid(mealClient.user)){
+        return res.status(400).json({
+            message: `${mealClient.user} isn't a valid meal client user ID.`
+        })
+    }
+
+    const mealClientUser = await User.findById(mealClient.user).lean();
+    if(!mealClientUser){
+        return res.status(500).json({message: `The user to whom the client ${mealClient.email} is assigned coudln't be found`})
+    }
+    if(req.user !== mealClientUser.email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })
     }
 
     if(name){
@@ -112,31 +188,61 @@ const deleteMeal = async (req, res) => {
     if(!id){
         return res.status(400).json({message: "Meal ID required."});
     }
-
-    let meal;
-    try{
-        meal = await Meal.findById(id).exec();
-        if(!meal){
-            return res.status(400).json({
-                message: `Meal with ID ${id} wasn not found.`
-            })
-        }
-    }
-    catch(error){
-        return res.status(400).json({message: `No meal with ID ${id} was found.`})
+    if(!ObjectId.isValid(id)){
+        return res.status(400).json({
+            message: `${id} isn't a valid ID.`
+        })
     }
 
+    const meal = await Meal.findById(id).exec();
     if(!meal){
         return res.status(400).json({
-            message: `Meal with ID ${id} not found.`
+            message: `Meal with ID ${id} wasn not found.`
+        })
+    }
+    if(!meal.client){
+        return res.status(400).json({
+            message: `Meal ${meal.name} doesn't have a client assigned.`
+        })
+    }
+    if(!ObjectId.isValid(meal.client)){
+        return res.status(400).json({
+            message: `${meal.client} isn't a valid meal client ID.`
+        })
+    }
+
+    const mealClient = await Client.findById(meal.client).exec();
+    if(!mealClient){
+        return res.status(500).json({
+            message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`
+        })
+    }
+    if(!mealClient.user){
+        return res.status(400).json({
+            message: `Client ${mealClient.email} doesn't have a user assigned.`
+        })
+    }
+    if(!ObjectId.isValid(mealClient.user)){
+        return res.status(400).json({
+            message: `${mealClient.user} isn't a valid meal client user ID.`
+        })
+    }
+
+    const mealClientUser = await User.findById(mealClient.user).lean();
+    if(!mealClientUser){
+        return res.status(500).json({message: `The user to whom the client ${mealClient.email} is assigned couldn't be found`})
+    }
+    if(req.user !== mealClientUser.email){
+        return res.status(401).json({
+            message: "Unauthorized"
         })
     }
 
     const result = await meal.deleteOne();
 
-    const reply = `Meal ${result.name} has been deleted.`
-
-    return res.json({message: reply})
+    return res.json({
+        message: `Meal ${result.name} has been deleted.`
+    })
 }
 
 module.exports = {

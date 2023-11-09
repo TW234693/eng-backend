@@ -42,7 +42,8 @@ const MealSchema = new mongoose.Schema({
     },
     client: {
         type: mongoose.Schema.ObjectId,
-        ref: "Client"
+        ref: "Client",
+        required: true
     }
 }, {
     collection: "Meal"

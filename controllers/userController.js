@@ -2,57 +2,17 @@ const User = require("../models/Users")
 const Client = require("../models/Clients")
 const bcrypt = require('bcrypt')
 
-const getAllUsers = async (_, res) => {
-    const users = await User.find().select('-password').lean();
-    if(!users || users.length<=0){
-        return res.status(400).json({message: "No users found."})
-    }
-    return res.json(users);
-}
-
-const searchUsers = async (req, res) => {
-    const {query} = req.params
-    const regex = new RegExp(query, 'i');
-    
-    const users = await User.find({
-        $or:[
-            {name: {$regex: regex}},
-            {email: {$regex: regex}},
-            {surname: {$regex: regex}},
-            {description: {$regex: regex}},
-            ]
-        })
-        .select('-password')
-        .lean();
-        
-    if(!users || users.length<=0){
-        return res.status(400).json({message: "No users found."})
-    }
-    return res.json(users);
-}
-
-const getUserByEmail = async (req, res) => {
-    const {email} = req.params
-    if(!email){
-        return res.status(400).json({
-            message: "User email must be provided."
-        })
-    }
-
-    const user = await User.findOne({email: email}).select('-password').lean();
-    if(!user){
-        return res.status(400).json({message: `No user with email ${email} was found.`})
-    }
-    return res.json({
-        ...user
-    });
-}
-
 const getUserClients = async (req, res) => {
     const {email} = req.params
     if(!email){
         return res.status(400).json({
             message: "User email must be provided."
+        })
+    }
+
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
         })
     }
 
@@ -74,6 +34,12 @@ const assignClient = async (req, res) => {
     if(!userEmail){
         return res.status(400).json({
             message: "User email must be provided."
+        })
+    }
+
+    if(req.user !== userEmail){
+        return res.status(401).json({
+            message: "Unauthorized"
         })
     }
 
@@ -101,50 +67,18 @@ const assignClient = async (req, res) => {
     })
 }
 
-const createUser = async (req, res) => {
-    const {password, email, name, surname, description} = req.body;
-
-    // Confirm data
-    if(!password || !email || !name || !surname || !description){
-        return res.status(400).json({message: "All fields are required."});
-    }
-
-    //Check for duplicates
-    const duplicate = await User.findOne({email}).lean().exec()
-    if(duplicate){
-        return res.status(409).json({messsage: `Email ${email} is already assigned to an existing user.`})
-    }
-
-    try{
-    const hashPassowrd = await bcrypt.hash(password, 10) //salt rounds
-    const userObject = {
-        email,
-        password: hashPassowrd,
-        name,
-        surname,
-        description,
-        rating: 0.0,
-        ratingsCount: 0,
-    }
-
-    //Save new user
-    await User.create(userObject)
-    res.status(201).json({
-        message: `New user ${email} was created!`
-    })
-    }
-    catch(error){
-        res.status(500).json({message: error.message})
-    }
-
-}
-
 const updateUser = async (req, res) => {
     const {email} = req.params;
     const {password, name, surname, description} = req.body;
 
     if(!email && !password && !name && !surname){
         return res.status(400).json({message: "The new password, surname, or name must be provided alongside user email."})
+    }
+
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })
     }
 
     const user = await User.findOne({email: email}).exec()
@@ -175,9 +109,17 @@ const updateClientNotes = async (req, res) => {
     const {userEmail, clientEmail} = req.params
     const {notes} = req.body
 
+    console.log('dupa')
+
     if(!userEmail || !clientEmail){
         return res.status(400).json({
             message: "User email and client emails must be provided"
+        })
+    }
+
+    if(req.user !== userEmail){
+        return res.status(401).json({
+            message: "Unauthorized"
         })
     }
 
@@ -209,12 +151,18 @@ const deleteUser = async (req, res) => {
         return res.status(400).json({message: "User email required."});
     }
 
-    const user = await User.findOne({email: email}).exec();
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })
+    }
 
+    const user = await User.findOne({email: email}).exec();
     if(!user){
         return res.status(400).json({message: "User not found."})
     }
 
+    await Client.updateMany({user: user._id}, {"$unset": {user: undefined}})
     const result = await user.deleteOne();
 
     const reply = `User with email ${result.email} has been deleted.`
@@ -223,12 +171,8 @@ const deleteUser = async (req, res) => {
 }
 
 module.exports = {
-    getAllUsers,
-    getUserByEmail,
-    searchUsers,
     getUserClients,
     assignClient,
-    createUser,
     deleteUser,
     updateUser,
     updateClientNotes

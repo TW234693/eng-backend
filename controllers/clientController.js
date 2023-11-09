@@ -2,6 +2,7 @@ const Client = require("../models/Clients")
 const Meal = require("../models/Meals")
 const User = require("../models/Users")
 const bcrypt = require('bcrypt')
+const ObjectId = require('mongoose').Types.ObjectId;
 
 const getClientByEmail = async (req, res) => {
     const {email} = req.params
@@ -15,9 +16,18 @@ const getClientByEmail = async (req, res) => {
     if(!client){
         return res.status(400).json({message: `No client with email ${email} was found.`})
     }
-    return res.json({
-        ...client
-    });
+
+    const clientUser = client.user && ObjectId.isValid(client.user)? await User.findById(client.user).lean(): null;
+
+    if(req.user === client.email || (clientUser && req.user === clientUser.email)){
+        return res.json({
+            ...client
+        });
+    }
+
+    return res.status(401).json({
+        message: "Unauthorized"
+    })
 }
 
 const getClientMeals = async (req, res) => {
@@ -28,7 +38,14 @@ const getClientMeals = async (req, res) => {
         })
     }
 
-    const client = await Client.findOne({email: email}).select('-password').lean();
+    const client = await Client.findOne({email: email}).lean();
+    const clientUser = client && client.user && ObjectId.isValid(client.user)? await User.findById(client.user).lean(): null;
+    if(req.user !== email && (clientUser || req.user !== clientUser.email)){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })
+    }
+ 
     if(!client){
         return res.status(400).json({message: `No client with email ${email} was found.`})
     }
@@ -43,41 +60,6 @@ const getClientMeals = async (req, res) => {
     return res.status(200).json(clientMeals)
 }
 
-const createClient = async (req, res) => {
-    const {password, email, name, surname} = req.body;
-
-    // Confirm data
-    if(!password || !email || !name || !surname){
-        return res.status(400).json({message: "All fields are required."});
-    }
-
-    //Check for duplicates
-    const duplicate = await Client.findOne({email}).lean().exec()
-    if(duplicate){
-        return res.status(409).json({messsage: `Email ${email} is already assigned to an existing client.`})
-    }
-
-    try{
-    const hashPassowrd = await bcrypt.hash(password, 10) //salt rounds
-    const clientObject = {
-        email,
-        password: hashPassowrd,
-        name,
-        surname
-    }
-
-    //Save new client
-    await Client.create(clientObject)
-    res.status(201).json({
-        message: `New client ${clientObject.email} was created!`
-    })
-    }
-    catch(error){
-        res.status(500).json({message: error.message})
-    }
-
-}
-
 const updateClient = async (req, res) => {
     const {email} = req.params;
     const {password, name, surname} = req.body;
@@ -87,8 +69,13 @@ const updateClient = async (req, res) => {
     }
 
     const client = await Client.findOne({email: email}).exec()
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })        
+    }
     if(!client){
-        res.status(400).json({message: "Client not found."})
+        res.status(400).json({message: `Client withe email ${email} was not found.`})
     }
 
     if(password){
@@ -115,32 +102,42 @@ const deleteClient = async (req, res) => {
     }
 
     const client = await Client.findOne({email: email}).exec();
-
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })        
+    }
     if(!client){
         return res.status(400).json({message: "Client not found."})
     }
-
+    
+    await Meal.deleteMany({client: client._id});
     const result = await client.deleteOne();
 
-    const reply = `Client ${result.email} with ID ${result._id} has been deleted.`
-
-    return res.json({message: reply})
+    return res.json({
+        message: `Client ${result.email} has been deleted.`
+    })
 }
 
 const unassignClient = async (req, res) => {
-    const {email} = req.params
+    const {email} = req.params;
 
     if(!email){
         return res.status(400).json({message: "Client email required."});
     }
 
     const client = await Client.findOne({email: email}).exec();
-
+    if(req.user !== email){
+        return res.status(401).json({
+            message: "Unauthorized"
+        })        
+    }
     if(!client){
         return res.status(400).json({message: "Client not found."})
     }
 
     client.user = undefined;
+    client.notes = undefined;
     const unassignedClient = await client.save();
 
     return res.json({
@@ -151,7 +148,6 @@ const unassignClient = async (req, res) => {
 module.exports = {
     getClientByEmail,
     getClientMeals,
-    createClient,
     updateClient,
     deleteClient,
     unassignClient
