@@ -58,7 +58,7 @@ const login = async (req, res) => {
         const refreshToken = createRefreshToken(foundUser, refreshTokenDuration)
         res.cookie('jwt', refreshToken, {
             httpOnly: true,
-            secure: false,
+            secure: true,
             sameSite: 'None',
             maxAge: 24 * 60 * 60 * 1000
         })
@@ -76,7 +76,7 @@ const login = async (req, res) => {
         const refreshToken = createRefreshToken(foundClient, refreshTokenDuration)
         res.cookie('jwt', refreshToken, {
             httpOnly: true,
-            secure: false,
+            secure: true,
             sameSite: 'None',
             maxAge: 24 * 60 * 60 * 1000
         })
@@ -168,7 +168,7 @@ const logout = async (req, res) => {
     res.clearCookie('jwt', {
         httpOnly: true,
         sameSite: 'None',
-        secure: false
+        secure: true
     })
     return res.status(202).json({message: "Cookie cleared!"});
 }
