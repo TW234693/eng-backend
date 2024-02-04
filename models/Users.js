@@ -22,6 +22,9 @@ const UserSchema = new mongoose.Schema(
     description: {
       type: String,
     },
+    photo: {
+      type: String,
+    },
   },
   {
     collection: "User",

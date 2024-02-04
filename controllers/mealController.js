@@ -35,11 +35,9 @@ const getMealById = async (req, res) => {
 
   const mealClient = await Client.findById(meal.client).lean();
   if (!mealClient) {
-    return res
-      .status(500)
-      .json({
-        message: `The client who is assigned to the meal ${meal.name} couldn't be found`,
-      });
+    return res.status(500).json({
+      message: `The client who is assigned to the meal ${meal.name} couldn't be found`,
+    });
   }
 
   return res.status(200).json({
@@ -49,8 +47,14 @@ const getMealById = async (req, res) => {
 
 const createMeal = async (req, res) => {
   const { clientEmail } = req.params;
-  const { name, instructions, minutesCookingTime, mealDate, ingredients } =
-    req.body;
+  const {
+    name,
+    instructions,
+    minutesCookingTime,
+    mealDate,
+    ingredients,
+    photo,
+  } = req.body;
 
   if (
     !name ||
@@ -59,12 +63,10 @@ const createMeal = async (req, res) => {
     !mealDate ||
     !ingredients
   ) {
-    return res
-      .status(400)
-      .json({
-        message:
-          "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided.",
-      });
+    return res.status(400).json({
+      message:
+        "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided.",
+    });
   }
 
   const mealClient = await Client.findOne({ email: clientEmail }).lean();
@@ -106,6 +108,10 @@ const createMeal = async (req, res) => {
     client: mealClient._id,
   };
 
+  if (photo) {
+    newMeal.photo = photo;
+  }
+
   await Meal.create(newMeal);
   res.status(201).json({
     message: `Meal ${newMeal.name} was created!`,
@@ -114,8 +120,14 @@ const createMeal = async (req, res) => {
 
 const updateMeal = async (req, res) => {
   const { id } = req.params;
-  const { name, instructions, minutesCookingTime, mealDate, ingredients } =
-    req.body;
+  const {
+    name,
+    instructions,
+    minutesCookingTime,
+    mealDate,
+    ingredients,
+    photo,
+  } = req.body;
 
   if (
     !name &&
@@ -176,11 +188,9 @@ const updateMeal = async (req, res) => {
 
   const mealClientUser = await User.findById(mealClient.user).lean();
   if (!mealClientUser) {
-    return res
-      .status(500)
-      .json({
-        message: `The user to whom the client ${mealClient.email} is assigned coudln't be found`,
-      });
+    return res.status(500).json({
+      message: `The user to whom the client ${mealClient.email} is assigned coudln't be found`,
+    });
   }
   if (req.user !== mealClientUser.email) {
     return res.status(401).json({
@@ -202,6 +212,9 @@ const updateMeal = async (req, res) => {
   }
   if (ingredients) {
     meal.ingredients = ingredients;
+  }
+  if (photo) {
+    meal.photo = photo;
   }
 
   const updatedMeal = await meal.save();
@@ -258,15 +271,13 @@ const deleteMeal = async (req, res) => {
 
   const mealClientUser = await User.findById(mealClient.user).lean();
   if (!mealClientUser) {
-    return res
-      .status(500)
-      .json({
-        message: `The user to whom the client ${mealClient.email} is assigned couldn't be found`,
-      });
+    return res.status(500).json({
+      message: `The user to whom the client ${mealClient.email} is assigned couldn't be found`,
+    });
   }
   if (req.user !== mealClientUser.email) {
     return res.status(401).json({
-      message: "Unauthorized",
+      message: "Unauthorized xd",
     });
   }
 

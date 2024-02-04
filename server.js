@@ -10,6 +10,7 @@ const mealRouter = require("./routes/mealRouter");
 const authRouter = require("./routes/authRouter");
 const registerRouter = require("./routes/registerRouter");
 const searchRouter = require("./routes/searchRouter");
+const ingredientRouter = require("./routes/ingredientRouter");
 
 require("dotenv").config();
 connectDB();
@@ -31,6 +32,7 @@ app.use("/search", searchRouter);
 app.use("/users", userRouter);
 app.use("/clients", clientRouter);
 app.use("/meals", mealRouter);
+app.use("/ingredients", ingredientRouter);
 
 app.all("*", (_, res) => {
   res.status(404);

@@ -22,6 +22,9 @@ const ClientSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    photo: {
+      type: String,
+    },
     user: {
       type: mongoose.Schema.ObjectId,
       ref: "User",

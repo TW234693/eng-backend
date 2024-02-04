@@ -59,7 +59,6 @@ const getClientMeals = async (req, res) => {
       (clientUser && req.user === clientUser.email)
     )
   ) {
-    console.log(clientUser, req.user, clientUser.email);
     return res.status(401).json({
       message: "Unauthorized",
     });
@@ -83,12 +82,12 @@ const getClientMeals = async (req, res) => {
 
 const updateClient = async (req, res) => {
   const { email } = req.params;
-  const { password, name, surname } = req.body;
+  const { password, name, surname, photo } = req.body;
 
-  if (!email && !password && !name && !surname) {
+  if (!email && !password && !name && !surname && !photo) {
     return res.status(400).json({
       message:
-        "The new password, surname, or name must be provided alongside client email.",
+        "The new password, surname, name, or photo must be provided alongside client email.",
     });
   }
 
@@ -112,6 +111,9 @@ const updateClient = async (req, res) => {
   }
   if (surname) {
     client.surname = surname;
+  }
+  if (photo) {
+    client.photo = photo;
   }
 
   const updatedUser = await client.save();

@@ -1,5 +1,6 @@
 const User = require("../models/Users");
 const Client = require("../models/Clients");
+const Ingredient = require("../models/Ingredients");
 const bcrypt = require("bcrypt");
 
 const getUserClients = async (req, res) => {
@@ -31,6 +32,35 @@ const getUserClients = async (req, res) => {
   }
 
   return res.status(200).json({ clients });
+};
+
+const getUserIngredients = async (req, res) => {
+  const { email } = req.params;
+  if (!email) {
+    return res.status(400).json({
+      message: "User email must be provided.",
+    });
+  }
+
+  if (req.user !== email) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  const user = await User.findOne({ email: email }).select("-password").lean();
+  if (!user) {
+    return res
+      .status(400)
+      .json({ message: `No user with email ${email} was found.` });
+  }
+
+  const ingredients = await Ingredient.find({ user: user._id }).lean();
+  if (!ingredients || ingredients.length === 0) {
+    return res.status(400).json({ message: "This user has no ingredients" });
+  }
+
+  return res.status(200).json({ ingredients: ingredients });
 };
 
 const assignClient = async (req, res) => {
@@ -86,12 +116,13 @@ const assignClient = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { email } = req.params;
-  const { password, name, surname, description } = req.body;
+  const { currentPassword, newPassword, name, surname, description, photo } =
+    req.body;
 
-  if (!email && !password && !name && !surname) {
+  if (!email && !newPassword && !name && !surname && !photo) {
     return res.status(400).json({
       message:
-        "The new password, surname, or name must be provided alongside user email.",
+        "The new password, surname, name, or photo must be provided alongside user email.",
     });
   }
 
@@ -106,8 +137,15 @@ const updateUser = async (req, res) => {
     res.status(400).json({ message: "User not found." });
   }
 
-  if (password) {
-    user.password = await bcrypt.hash(password, 10);
+  if (newPassword && currentPassword) {
+    if (bcrypt.compareSync(currentPassword, user.password)) {
+      user.password = await bcrypt.hash(newPassword, 10);
+    } else {
+      return res.status(400).json({
+        message:
+          "The provided current password is incorrect. Profile failed to update.",
+      });
+    }
   }
   if (name) {
     user.name = name;
@@ -118,10 +156,14 @@ const updateUser = async (req, res) => {
   if (description) {
     user.description = description;
   }
+  if (photo) {
+    user.photo = photo;
+  }
 
   const updatedUser = await user.save();
   return res.json({
     message: `User ${updatedUser.email} has been updated.`,
+    user,
   });
 };
 
@@ -196,4 +238,5 @@ module.exports = {
   deleteUser,
   updateUser,
   updateClientNotes,
+  getUserIngredients,
 };

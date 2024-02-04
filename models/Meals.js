@@ -10,25 +10,45 @@ const MealSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    photo: {
+      type: String,
+    },
     ingredients: {
       type: [
         {
-          name: {
-            type: String,
-            required: true,
-          },
           quantityGrams: {
             type: Number,
             required: true,
           },
-          fatGrams: {
-            type: Number,
+          name: {
+            type: String,
+            required: true,
           },
-          carbohydrateGrams: {
-            type: Number,
+          photo: {
+            type: String,
           },
-          proteinGrams: {
-            type: Number,
+          nutrients: {
+            type: [
+              {
+                code: {
+                  type: String,
+                  required: true,
+                },
+                label: {
+                  type: String,
+                  required: true,
+                },
+                quantity: {
+                  type: Number,
+                  required: true,
+                },
+                unit: {
+                  type: String,
+                  required: true,
+                },
+              },
+            ],
+            required: true,
           },
         },
       ],
