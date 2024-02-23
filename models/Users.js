@@ -25,6 +25,23 @@ const UserSchema = new mongoose.Schema(
     photo: {
       type: String,
     },
+    rating: {
+      default: [],
+      required: true,
+      type: [
+        {
+          client: {
+            type: mongoose.Schema.ObjectId,
+            ref: "Client",
+            required: true,
+          },
+          value: {
+            type: Number,
+            required: true,
+          },
+        },
+      ],
+    },
   },
   {
     collection: "User",

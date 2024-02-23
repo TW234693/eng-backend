@@ -12,5 +12,9 @@ router
   .delete(clientController.deleteClient); // no req body AUTH
 router.route("/updateClient/email=:email").patch(clientController.updateClient); // {password?, name?, surname?} AUTH
 router.route("/unassign/email=:email").patch(clientController.unassignClient); // no req body AUTH
+router.route("/rateUser/email=:email").patch(clientController.rateUser); // {rating: 1-5} AUTH
+router
+  .route("/getCurrentUser/email=:email")
+  .get(clientController.getCurrentUser); // no req body AUTH
 
 module.exports = router;

@@ -149,7 +149,6 @@ const deleteClient = async (req, res) => {
 
 const unassignClient = async (req, res) => {
   const { email } = req.params;
-
   if (!email) {
     return res.status(400).json({ message: "Client email required." });
   }
@@ -172,10 +171,105 @@ const unassignClient = async (req, res) => {
   });
 };
 
+const rateUser = async (req, res) => {
+  const { email } = req.params;
+  const { rating: newRating } = req.body;
+
+  if (!email || !newRating) {
+    return res
+      .status(400)
+      .json({ message: "Client email and rating are required." });
+  }
+
+  const client = await Client.findOne({ email: email }).exec();
+  if (req.user !== email) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+  if (!client) {
+    return res.status(400).json({ message: "Client not found." });
+  }
+
+  const clientUser =
+    client.user && ObjectId.isValid(client.user)
+      ? await User.findById(client.user).select("-password")
+      : null;
+
+  if (!clientUser) {
+    return res
+      .status(400)
+      .json({ message: "You do not have a user assigned to you." });
+  }
+
+  const { rating: currentRatings } = clientUser;
+  const currentRating = currentRatings.find((rating) =>
+    rating.client.equals(client._id)
+  );
+
+  if (!currentRating) {
+    const ratingToAdd = {
+      client: client._id,
+      value: newRating,
+    };
+
+    clientUser.rating = [...clientUser.rating, ratingToAdd];
+    const updatedClientUsed = await clientUser.save();
+    return res.json({
+      message: `Your new rating for user ${updatedClientUsed.email} is ${ratingToAdd.value}`,
+    });
+  } else {
+    const newRatings = currentRatings.map((cr) => {
+      return cr.client.equals(client._id)
+        ? { client: client._id, value: newRating }
+        : cr;
+    });
+
+    clientUser.rating = newRatings;
+    const updatedClientUsed = await clientUser.save();
+    return res.json({
+      message: `Your updated rating for user ${updatedClientUsed.email} is ${newRating}`,
+    });
+  }
+};
+
+const getCurrentUser = async (req, res) => {
+  const { email } = req.params;
+
+  if (!email) {
+    return res.status(400).json({ message: "Client email is required." });
+  }
+
+  const client = await Client.findOne({ email: email }).exec();
+  if (req.user !== email) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+  if (!client) {
+    return res.status(400).json({ message: "Client not found." });
+  }
+
+  const clientUser =
+    client.user && ObjectId.isValid(client.user)
+      ? await User.findById(client.user).select("-password")
+      : null;
+
+  if (!clientUser) {
+    return res
+      .status(400)
+      .json({ message: "You do not have a user assigned to you." });
+  }
+
+  return res.status(200).json(clientUser);
+};
+
 module.exports = {
   getClientByEmail,
   getClientMeals,
   updateClient,
   deleteClient,
   unassignClient,
+  rateUser,
+  getCurrentUser,
 };
