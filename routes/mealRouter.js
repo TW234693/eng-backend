@@ -9,6 +9,9 @@ router.use(verifyJWT);
 router
   .route("/createMeal/clientEmail=:clientEmail")
   .post(mealController.createMeal); // AUTH {name, instructions, minutesCookingTime, mealDate, ingredients, photo}
+router
+  .route("/createMealTemplate/userEmail=:userEmail")
+  .post(mealController.createMealTemplate); // AUTH {name, instructions, minutesCookingTime, mealDate, ingredients, photo}
 router.route("/updateMeal/id=:id").patch(mealController.updateMeal); // AUTH {name?, instructions?, minutesCookingTime?, mealDate?, ingredients?, photo?}
 router.route("/deleteMeal/id=:id").delete(mealController.deleteMeal); // AUTH no req body
 

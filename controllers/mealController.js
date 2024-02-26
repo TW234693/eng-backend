@@ -118,6 +118,62 @@ const createMeal = async (req, res) => {
   });
 };
 
+const createMealTemplate = async (req, res) => {
+  const { userEmail } = req.params;
+  const {
+    name,
+    instructions,
+    minutesCookingTime,
+    mealDate,
+    ingredients,
+    photo,
+  } = req.body;
+
+  if (
+    !name ||
+    !instructions ||
+    !minutesCookingTime ||
+    !mealDate ||
+    !ingredients
+  ) {
+    return res.status(400).json({
+      message:
+        "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided.",
+    });
+  }
+
+  const mealUser = await User.findOne({ email: userEmail }).lean();
+  if (!mealUser) {
+    return res.status(400).json({
+      messsage: `User with email ${userEmail} was not found.`,
+    });
+  }
+  if (req.user !== mealUser.email) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  const newMealTemplate = {
+    name,
+    instructions,
+    ingredients,
+    minutesCookingTime,
+    mealDate,
+    ingredients,
+    user: mealUser._id,
+  };
+
+  if (photo) {
+    newMealTemplate.photo = photo;
+  }
+
+  await Meal.create(newMealTemplate);
+  res.status(201).json({
+    message: `Meal template ${newMealTemplate.name} was created!`,
+  });
+};
+
 const updateMeal = async (req, res) => {
   const { id } = req.params;
   const {
@@ -158,41 +214,47 @@ const updateMeal = async (req, res) => {
       message: `Meal with ID ${id} was not found.`,
     });
   }
-  if (!meal.client) {
+  const isMealTemplate = !!meal.user;
+  const mealOwnerId = isMealTemplate ? meal.user : meal.client;
+  if (!mealOwnerId) {
     return res.status(500).json({
-      message: `Meal ${meal.name} doesn't have a client assigned.`,
+      message: `Meal ${meal.name} doesn't have an owner assigned.`,
     });
   }
-  if (!ObjectId.isValid(meal.client)) {
+  if (!ObjectId.isValid(mealOwnerId)) {
     return res.status(500).json({
-      message: `${meal.client} isn't a valid meal client ID.`,
+      message: `${meal.client} isn't a valid meal owner ID.`,
     });
   }
 
   const mealClient = await Client.findById(meal.client).exec();
-  if (!mealClient) {
-    return res.status(500).json({
-      message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`,
-    });
-  }
-  if (!mealClient.user) {
-    return res.status(400).json({
-      message: `Client ${mealClient.email} doesn't have a user assigned.`,
-    });
-  }
-  if (!ObjectId.isValid(mealClient.user)) {
-    return res.status(400).json({
-      message: `${mealClient.user} isn't a valid meal client user ID.`,
-    });
+  if (!isMealTemplate) {
+    if (!mealClient) {
+      return res.status(500).json({
+        message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`,
+      });
+    }
+    if (!mealClient.user) {
+      return res.status(400).json({
+        message: `Client ${mealClient.email} doesn't have a user assigned.`,
+      });
+    }
+    if (!ObjectId.isValid(mealClient.user)) {
+      return res.status(400).json({
+        message: `${mealClient.user} isn't a valid meal client user ID.`,
+      });
+    }
   }
 
-  const mealClientUser = await User.findById(mealClient.user).lean();
-  if (!mealClientUser) {
+  const mealUser = isMealTemplate
+    ? await User.findById(mealOwnerId).lean()
+    : await User.findById(mealClient.user).lean();
+  if (!mealUser) {
     return res.status(500).json({
-      message: `The user to whom the client ${mealClient.email} is assigned coudln't be found`,
+      message: `The user who should manage the meal ${meal.name} couldn't be found`,
     });
   }
-  if (req.user !== mealClientUser.email) {
+  if (req.user !== mealUser.email) {
     return res.status(401).json({
       message: "Unauthorized",
     });
@@ -241,43 +303,50 @@ const deleteMeal = async (req, res) => {
       message: `Meal with ID ${id} wasn not found.`,
     });
   }
-  if (!meal.client) {
-    return res.status(400).json({
-      message: `Meal ${meal.name} doesn't have a client assigned.`,
+
+  const isMealTemplate = !!meal.user;
+  const mealOwnerId = isMealTemplate ? meal.user : meal.client;
+  if (!mealOwnerId) {
+    return res.status(500).json({
+      message: `Meal ${meal.name} doesn't have an owner assigned.`,
     });
   }
-  if (!ObjectId.isValid(meal.client)) {
-    return res.status(400).json({
-      message: `${meal.client} isn't a valid meal client ID.`,
+  if (!ObjectId.isValid(mealOwnerId)) {
+    return res.status(500).json({
+      message: `${meal.client} isn't a valid meal owner ID.`,
     });
   }
 
   const mealClient = await Client.findById(meal.client).exec();
-  if (!mealClient) {
-    return res.status(500).json({
-      message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`,
-    });
-  }
-  if (!mealClient.user) {
-    return res.status(400).json({
-      message: `Client ${mealClient.email} doesn't have a user assigned.`,
-    });
-  }
-  if (!ObjectId.isValid(mealClient.user)) {
-    return res.status(400).json({
-      message: `${mealClient.user} isn't a valid meal client user ID.`,
-    });
+  if (!isMealTemplate) {
+    if (!mealClient) {
+      return res.status(500).json({
+        message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`,
+      });
+    }
+    if (!mealClient.user) {
+      return res.status(400).json({
+        message: `Client ${mealClient.email} doesn't have a user assigned.`,
+      });
+    }
+    if (!ObjectId.isValid(mealClient.user)) {
+      return res.status(400).json({
+        message: `${mealClient.user} isn't a valid meal client user ID.`,
+      });
+    }
   }
 
-  const mealClientUser = await User.findById(mealClient.user).lean();
-  if (!mealClientUser) {
+  const mealUser = isMealTemplate
+    ? await User.findById(mealOwnerId).lean()
+    : await User.findById(mealClient.user).lean();
+  if (!mealUser) {
     return res.status(500).json({
-      message: `The user to whom the client ${mealClient.email} is assigned couldn't be found`,
+      message: `The user who should manage the meal ${meal.name} couldn't be found`,
     });
   }
-  if (req.user !== mealClientUser.email) {
+  if (req.user !== mealUser.email) {
     return res.status(401).json({
-      message: "Unauthorized xd",
+      message: "Unauthorized",
     });
   }
 
@@ -291,6 +360,7 @@ const deleteMeal = async (req, res) => {
 module.exports = {
   getMealById,
   createMeal,
+  createMealTemplate,
   updateMeal,
   deleteMeal,
 };

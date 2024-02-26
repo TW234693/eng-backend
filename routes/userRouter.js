@@ -7,6 +7,9 @@ router.use(verifyJWT);
 
 router.route("/getClients/email=:email").get(userController.getUserClients); // no req body AUTH
 router
+  .route("/getMealtemplates/email=:email")
+  .get(userController.getUserMealTemplates); // no req body AUTH
+router
   .route("/getIngredients/email=:email")
   .get(userController.getUserIngredients); // no req body AUTH
 router.route("/assign").patch(userController.assignClient); // {userEmail, clientEmail} AUTH

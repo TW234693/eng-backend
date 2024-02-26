@@ -68,7 +68,10 @@ const MealSchema = new mongoose.Schema(
     client: {
       type: mongoose.Schema.ObjectId,
       ref: "Client",
-      required: true,
+    },
+    user: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
     },
   },
   {

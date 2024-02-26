@@ -1,5 +1,6 @@
 const User = require("../models/Users");
 const Client = require("../models/Clients");
+const Meal = require("../models/Meals");
 const Ingredient = require("../models/Ingredients");
 const bcrypt = require("bcrypt");
 
@@ -32,6 +33,35 @@ const getUserClients = async (req, res) => {
   }
 
   return res.status(200).json({ clients });
+};
+
+const getUserMealTemplates = async (req, res) => {
+  const { email } = req.params;
+  if (!email) {
+    return res.status(400).json({
+      message: "User email must be provided.",
+    });
+  }
+
+  if (req.user !== email) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  const user = await User.findOne({ email: email }).select("-password").lean();
+  if (!user) {
+    return res
+      .status(400)
+      .json({ message: `No user with email ${email} was found.` });
+  }
+
+  const meals = await Meal.find({ user: user._id }).lean();
+  if (!meals || meals.length === 0) {
+    return res.status(400).json({ message: "This user has no meal templates" });
+  }
+
+  return res.status(200).json({ meals });
 };
 
 const getUserIngredients = async (req, res) => {
@@ -234,6 +264,7 @@ const deleteUser = async (req, res) => {
 
 module.exports = {
   getUserClients,
+  getUserMealTemplates,
   assignClient,
   deleteUser,
   updateUser,
