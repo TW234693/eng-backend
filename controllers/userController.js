@@ -87,7 +87,7 @@ const getUserIngredients = async (req, res) => {
 
   const ingredients = await Ingredient.find({ user: user._id }).lean();
   if (!ingredients || ingredients.length === 0) {
-    return res.status(400).json({ message: "This user has no ingredients" });
+    return res.status(200).json({ message: "This user has no ingredients" });
   }
 
   return res.status(200).json({ ingredients: ingredients });
@@ -97,13 +97,13 @@ const assignClient = async (req, res) => {
   const { userEmail, clientEmail } = req.body;
   if (!userEmail) {
     return res.status(400).json({
-      message: "User email must be provided.",
+      message: "assign_error_noUserEmail",
     });
   }
 
   if (req.user !== userEmail) {
     return res.status(401).json({
-      message: "Unauthorized, cannot assign client",
+      message: "Unauthorized",
     });
   }
 
@@ -112,35 +112,31 @@ const assignClient = async (req, res) => {
     .lean()
     .exec();
   if (!user) {
-    return res
-      .status(400)
-      .json({ message: `No user with email ${userEmail} was found.` });
+    return res.status(400).json({ message: `assign_error_userNotFound` });
   }
 
   const client = await Client.findOne({ email: clientEmail })
     .select("-password")
     .exec();
   if (!client) {
-    return res
-      .status(400)
-      .json({ message: `No client with email ${clientEmail} was found.` });
+    return res.status(400).json({ message: `assign_error_clientNotFound` });
   }
 
   if (client.user && user._id.equals(client.user._id)) {
     return res.status(400).json({
-      message: `User ${userEmail} is already assigned to client ${clientEmail}.`,
+      message: `assign_error_alreadyAssigned`,
     });
   }
   if (client.user) {
     return res.status(400).json({
-      message: `Client ${clientEmail} is already assigned to a different user and must unassign themself first before being assigned elsewhere.`,
+      message: `assign_error_assignedToOther`,
     });
   }
 
   client.user = user._id;
-  const updatedClient = await client.save();
+  await client.save();
   return res.status(201).json({
-    message: `Client ${updatedClient.email} has been assigned.`,
+    message: `assign_success`,
   });
 };
 
@@ -149,10 +145,15 @@ const updateUser = async (req, res) => {
   const { currentPassword, newPassword, name, surname, description, photo } =
     req.body;
 
-  if (!email && !newPassword && !name && !surname && !photo) {
+  if (!email) {
     return res.status(400).json({
-      message:
-        "The new password, surname, name, or photo must be provided alongside user email.",
+      message: "updateUser_error_noEmail",
+    });
+  }
+
+  if (!(newPassword && currentPassword) && !name && !surname && !photo) {
+    return res.status(400).json({
+      message: "updateUser_error_noValues",
     });
   }
 
@@ -164,7 +165,7 @@ const updateUser = async (req, res) => {
 
   const user = await User.findOne({ email: email }).exec();
   if (!user) {
-    res.status(400).json({ message: "User not found." });
+    res.status(400).json({ message: "notFound_user" });
   }
 
   if (newPassword && currentPassword) {
@@ -172,8 +173,7 @@ const updateUser = async (req, res) => {
       user.password = await bcrypt.hash(newPassword, 10);
     } else {
       return res.status(400).json({
-        message:
-          "The provided current password is incorrect. Profile failed to update.",
+        message: "updateUser_error_passwordMismatch",
       });
     }
   }
@@ -190,10 +190,9 @@ const updateUser = async (req, res) => {
     user.photo = photo;
   }
 
-  const updatedUser = await user.save();
+  await user.save();
   return res.json({
-    message: `User ${updatedUser.email} has been updated.`,
-    user,
+    message: `updateUser_success`,
   });
 };
 

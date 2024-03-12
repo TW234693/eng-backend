@@ -109,7 +109,7 @@ const refresh = (req, res) => {
     async (err, decoded) => {
       if (err) {
         res.status(403).json({
-          message: "Forbiddenlols",
+          message: "Forbidden",
         });
       }
 

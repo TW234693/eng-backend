@@ -64,32 +64,31 @@ const createMeal = async (req, res) => {
     !ingredients
   ) {
     return res.status(400).json({
-      message:
-        "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided.",
+      message: "meal_error_noReqData",
     });
   }
 
   const mealClient = await Client.findOne({ email: clientEmail }).lean();
   if (!mealClient) {
     return res.status(400).json({
-      messsage: `Client with email ${clientEmail} was not found.`,
+      messsage: `meal_error_ownerNotFound`,
     });
   }
   if (!mealClient.user) {
     return res.status(400).json({
-      message: `Client ${mealClient.email} doesn't have a user assigned.`,
+      message: `meal_error_clientNoUser`,
     });
   }
   if (!ObjectId.isValid(mealClient.user)) {
     return res.status(500).json({
-      message: `${mealClient.user} isn't a valid meal client user ID.`,
+      message: `meal_error_invalidOwnerUser`,
     });
   }
 
   const mealClientUser = await User.findById(mealClient.user).lean();
   if (!mealClientUser) {
     return res.status(500).json({
-      message: `User to which the client ${mealClient.email} is assigned to doesn't exist.`,
+      message: `meal_error_ownerUserNotFound`,
     });
   }
   if (req.user !== mealClientUser.email) {
@@ -114,7 +113,7 @@ const createMeal = async (req, res) => {
 
   await Meal.create(newMeal);
   res.status(201).json({
-    message: `Meal ${newMeal.name} was created!`,
+    message: `meal_create_success`,
   });
 };
 
@@ -137,15 +136,14 @@ const createMealTemplate = async (req, res) => {
     !ingredients
   ) {
     return res.status(400).json({
-      message:
-        "Meal name, cooking instructions, cooking time, ingredients, and time of the meal must be provided.",
+      message: "meal_error_noReqData",
     });
   }
 
   const mealUser = await User.findOne({ email: userEmail }).lean();
   if (!mealUser) {
     return res.status(400).json({
-      messsage: `User with email ${userEmail} was not found.`,
+      messsage: `meal_error_ownerNotFound`,
     });
   }
   if (req.user !== mealUser.email) {
@@ -170,7 +168,7 @@ const createMealTemplate = async (req, res) => {
 
   await Meal.create(newMealTemplate);
   res.status(201).json({
-    message: `Meal template ${newMealTemplate.name} was created!`,
+    message: `meal_createTemplate_success`,
   });
 };
 
@@ -193,37 +191,37 @@ const updateMeal = async (req, res) => {
     !ingredients
   ) {
     return res.status(400).json({
-      message: `New meal name, cooking instructions, time of cooking, ingredients, or time of meal must be provided.`,
+      message: `meal_error_noReqData`,
     });
   }
 
   if (!id) {
     return res.status(400).json({
-      message: "Meal ID must be provided",
+      message: "meal_error_noId",
     });
   }
   if (!ObjectId.isValid(id)) {
     return res.status(400).json({
-      message: `${id} isn't a valid ID.`,
+      message: `meal_error_invalidId`,
     });
   }
 
   const meal = await Meal.findById(id).exec();
   if (!meal) {
     return res.status(400).json({
-      message: `Meal with ID ${id} was not found.`,
+      message: `MnotFound_meal`,
     });
   }
   const isMealTemplate = !!meal.user;
   const mealOwnerId = isMealTemplate ? meal.user : meal.client;
   if (!mealOwnerId) {
     return res.status(500).json({
-      message: `Meal ${meal.name} doesn't have an owner assigned.`,
+      message: `meal_error_ownerNotFound`,
     });
   }
   if (!ObjectId.isValid(mealOwnerId)) {
     return res.status(500).json({
-      message: `${meal.client} isn't a valid meal owner ID.`,
+      message: `meal_error_invalidOwnerId`,
     });
   }
 
@@ -231,17 +229,17 @@ const updateMeal = async (req, res) => {
   if (!isMealTemplate) {
     if (!mealClient) {
       return res.status(500).json({
-        message: `Couldn't find client ${mealClient.email} assigned to the meal ${meal.name}`,
+        message: `meal_error_ownerNotFound`,
       });
     }
     if (!mealClient.user) {
       return res.status(400).json({
-        message: `Client ${mealClient.email} doesn't have a user assigned.`,
+        message: `meal_error_clientNoUser`,
       });
     }
     if (!ObjectId.isValid(mealClient.user)) {
       return res.status(400).json({
-        message: `${mealClient.user} isn't a valid meal client user ID.`,
+        message: `meal_error_invalidOwnerUser`,
       });
     }
   }
@@ -251,7 +249,7 @@ const updateMeal = async (req, res) => {
     : await User.findById(mealClient.user).lean();
   if (!mealUser) {
     return res.status(500).json({
-      message: `The user who should manage the meal ${meal.name} couldn't be found`,
+      message: `meal_error_ownerNotFound`,
     });
   }
   if (req.user !== mealUser.email) {
@@ -281,7 +279,7 @@ const updateMeal = async (req, res) => {
 
   const updatedMeal = await meal.save();
   return res.status(201).json({
-    message: `Meal ${updatedMeal.name} has been updated.`,
+    message: `meal_update_success`,
   });
 };
 

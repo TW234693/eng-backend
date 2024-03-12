@@ -82,12 +82,17 @@ const getClientMeals = async (req, res) => {
 
 const updateClient = async (req, res) => {
   const { email } = req.params;
-  const { password, name, surname, photo } = req.body;
+  const { currentPassword, newPassword, name, surname, photo } = req.body;
 
-  if (!email && !password && !name && !surname && !photo) {
+  if (!email) {
     return res.status(400).json({
-      message:
-        "The new password, surname, name, or photo must be provided alongside client email.",
+      message: "updateClient_error_noEmail",
+    });
+  }
+
+  if (!(newPassword && currentPassword) && !name && !surname && !photo) {
+    return res.status(400).json({
+      message: "updateClient_error_noValues",
     });
   }
 
@@ -98,13 +103,17 @@ const updateClient = async (req, res) => {
     });
   }
   if (!client) {
-    res
-      .status(400)
-      .json({ message: `Client withe email ${email} was not found.` });
+    res.status(400).json({ message: `notFound_client` });
   }
 
-  if (password) {
-    client.password = await bcrypt.hash(password, 10);
+  if (newPassword && currentPassword) {
+    if (bcrypt.compareSync(currentPassword, client.password)) {
+      client.password = await bcrypt.hash(newPassword, 10);
+    } else {
+      return res.status(400).json({
+        message: "updateClient_error_passwordMismatch",
+      });
+    }
   }
   if (name) {
     client.name = name;
@@ -116,9 +125,9 @@ const updateClient = async (req, res) => {
     client.photo = photo;
   }
 
-  const updatedUser = await client.save();
+  await client.save();
   return res.json({
-    message: `Client ${updatedUser.email} has been updated.`,
+    message: `updateClient_success`,
   });
 };
 

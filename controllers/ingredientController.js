@@ -64,7 +64,7 @@ const searchIngredients = async (req, res) => {
   }
   if (req.user !== user.email || !req.user) {
     return res.status(401).json({
-      message: "Unauthorized xd",
+      message: "Unauthorized",
     });
   }
 
@@ -72,13 +72,9 @@ const searchIngredients = async (req, res) => {
     name: { $regex: regex },
   }).lean();
 
-  //   console.log(ingredients);
-
   const filteredIngredients = ingredients.filter((ingredient) => {
     return ingredient.user._id.equals(user._id);
   });
-
-  //   console.log(filteredIngredients);
 
   if (!filteredIngredients || filteredIngredients.length <= 0) {
     return res.status(400).json({ message: "No ingredients found." });
@@ -91,7 +87,7 @@ const createIngredient = async (req, res) => {
 
   if (!name || !nutrients) {
     return res.status(400).json({
-      message: "Ingredient name and its nutrients must be provided.",
+      message: "createIngredient_error_noNameNoNutrients",
     });
   }
 
@@ -100,7 +96,7 @@ const createIngredient = async (req, res) => {
   }).lean();
   if (!ingredientUser) {
     return res.status(500).json({
-      message: `No user with email ${req.user} was found.`,
+      message: `notFound_user`,
     });
   }
   if (req.user !== ingredientUser.email) {
@@ -122,7 +118,7 @@ const createIngredient = async (req, res) => {
 
   await Ingredient.create(newIngredient);
   res.status(201).json({
-    message: `Ingredient ${newIngredient.name} was created!`,
+    message: `createIngredient_success`,
   });
 };
 
@@ -132,42 +128,42 @@ const updateIngredient = async (req, res) => {
 
   if (!name && !nutrients) {
     return res.status(400).json({
-      message: `Updated ingredient name or nutrients must be provided.`,
+      message: `updateIngredient_error_noNameNoNutrients.`,
     });
   }
 
   if (!id) {
     return res.status(400).json({
-      message: "Ingredient ID must be provided",
+      message: "updateIngredient_error_noId",
     });
   }
   if (!ObjectId.isValid(id)) {
     return res.status(400).json({
-      message: `${id} isn't a valid ID.`,
+      message: `updateIngredient_error_invalidId`,
     });
   }
 
   const ingredient = await Ingredient.findById(id).exec();
   if (!ingredient) {
     return res.status(400).json({
-      message: `Ingredient with ID ${id} was not found.`,
+      message: `notFound_ingredient`,
     });
   }
   if (!ingredient.user) {
     return res.status(500).json({
-      message: `Ingredient ${ingredient.name} doesn't have a user assigned.`,
+      message: `updateIngredient_error_notAssigned`,
     });
   }
   if (!ObjectId.isValid(ingredient.user)) {
     return res.status(500).json({
-      message: `${ingredient.user} isn't a valid ingredient user ID.`,
+      message: `updateIngredient_error_invalidOwnerId`,
     });
   }
 
   const ingredientUser = await User.findById(ingredient.user).exec();
   if (!ingredientUser) {
     return res.status(500).json({
-      message: `Couldn't find user ${ingredientUser.email} assigned to the ingredient ${ingredient.name}`,
+      message: `updateIngredient_error_ownerNotFound`,
     });
   }
   if (req.user !== ingredientUser.email) {
@@ -186,9 +182,9 @@ const updateIngredient = async (req, res) => {
     ingredient.photo = photo;
   }
 
-  const updatedIngredient = await ingredient.save();
+  await ingredient.save();
   return res.status(201).json({
-    message: `Ingredient ${updatedIngredient.name} has been updated.`,
+    message: `updateIngredient_success`,
   });
 };
 
@@ -196,35 +192,35 @@ const deleteIngredient = async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Ingredient ID required." });
+    return res.status(400).json({ message: "deleteIngredient_error_noId" });
   }
   if (!ObjectId.isValid(id)) {
     return res.status(400).json({
-      message: `${id} isn't a valid ID.`,
+      message: `deleteIngredient_error_invalidId`,
     });
   }
 
   const ingredient = await Ingredient.findById(id).exec();
   if (!ingredient) {
     return res.status(400).json({
-      message: `Ingredient with ID ${id} wasn not found.`,
+      message: `notFound_ingredient`,
     });
   }
   if (!ingredient.user) {
     return res.status(400).json({
-      message: `Ingredient ${ingredient.name} doesn't have a user assigned.`,
+      message: `deleteIngredient_error_notAssigned`,
     });
   }
   if (!ObjectId.isValid(ingredient.user)) {
     return res.status(400).json({
-      message: `${ingredient.user} isn't a valid ingredient user ID.`,
+      message: `deleteIngredient_error_invalidOwnerId`,
     });
   }
 
   const ingredientUser = await User.findById(ingredient.user).lean();
   if (!ingredientUser) {
     return res.status(500).json({
-      message: `The user to whom the ingredient ${ingredient.name} is assigned couldn't be found`,
+      message: `deleteIngredient_error_ownerNotFound`,
     });
   }
   if (req.user !== ingredientUser.email) {
@@ -233,10 +229,9 @@ const deleteIngredient = async (req, res) => {
     });
   }
 
-  const result = await ingredient.deleteOne();
-
+  await ingredient.deleteOne();
   return res.json({
-    message: `Ingredient ${result.name} has been deleted.`,
+    message: `deleteIngredient_success`,
   });
 };
 
