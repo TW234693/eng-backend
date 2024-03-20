@@ -29,7 +29,7 @@ const getUserClients = async (req, res) => {
     .select("-password")
     .lean();
   if (!clients || clients.length === 0) {
-    return res.status(400).json({ message: "This user has no clients" });
+    return res.status(200).json({ clients: [] });
   }
 
   return res.status(200).json({ clients });
