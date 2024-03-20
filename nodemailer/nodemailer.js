@@ -1,4 +1,6 @@
 const nodemailer = require("nodemailer");
+var dotenv = require("dotenv");
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
   service: "Gmail",
@@ -13,6 +15,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendActivationEmail(fullname, email, activationLink, locale) {
   console.log(fullname, email, activationLink);
+  console.log(process.env.NODEMAILER_PASSWORD);
   const inPolish = locale === "pl";
   const subject = inPolish
     ? "FeAST - Aktywacja konta"
