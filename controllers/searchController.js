@@ -10,7 +10,15 @@ const getAllUsers = async (_, res) => {
 
 const searchUsers = async (req, res) => {
   const { query } = req.params;
-  const regex = new RegExp(query, "i");
+  const queryTokens = query.split(" ");
+  const regexBase = queryTokens.reduce((acc, val) => {
+    if (val !== queryTokens[0]) {
+      acc = `${acc}|${val}`;
+    }
+    return acc;
+  }, queryTokens[0]);
+
+  const regex = new RegExp(regexBase, "i");
 
   const users = await User.find({
     $or: [

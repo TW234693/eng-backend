@@ -45,7 +45,7 @@ const login = async (req, res) => {
     });
   } else if (foundUser && !foundClient) {
     const match = await bcrypt.compare(password, foundUser.password);
-    if (!match) {
+    if (!match || !foundUser.active) {
       return res.status(401).json({
         message: `Unauthorized`,
       });
@@ -67,7 +67,7 @@ const login = async (req, res) => {
     res.json({ accessToken });
   } else if (foundClient && !foundUser) {
     const match = await bcrypt.compare(password, foundClient.password);
-    if (!match) {
+    if (!match || !foundClient.active) {
       return res.status(401).json({
         message: `Unauthorized`,
       });
@@ -152,27 +152,6 @@ const logout = async (req, res) => {
     });
   }
 
-  // const refreshToken = cookies.jwt;
-  // const foundUser = await User.findOne({refreshToken}).exec();
-  // const foundClient = await Client.findOne({refreshToken}).exec();
-
-  // if(!foundUser && !foundClient){
-  //     res.clearCookie('jwt', {
-  //         httpOnly: true,
-  //         sameSite: 'None',
-  //         secure: true
-  //     })
-  //     return res.sendStatus(204);
-  // }
-  // else if(foundUser && !foundClient){
-  //     foundUser.refreshToken = "";
-  //     await foundUser.save();
-  // }
-  // else if(!foundUser && foundClient){
-  //     foundClient.refreshToken = "";
-  //     await foundClient.save();
-  // }
-
   res.clearCookie("jwt", {
     httpOnly: true,
     sameSite: "None",
@@ -181,8 +160,54 @@ const logout = async (req, res) => {
   return res.status(202).json({ message: "Cookie cleared!" });
 };
 
+const activate = async (req, res) => {
+  const { id } = req.params;
+
+  const foundClient = await Client.findOne({ _id: id }).exec();
+  const foundUser = await User.findOne({ _id: id }).exec();
+
+  if (!foundClient && !foundUser) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  } else if (foundUser && !foundClient) {
+    foundUser.active = true;
+    foundUser
+      .save()
+      .then(() => {
+        return res.status(200).json({
+          message: `activateAccount_success`,
+        });
+      })
+      .catch(() => {
+        return res.status(400).json({
+          message: `activateAccount_fail`,
+        });
+      });
+  } else if (!foundUser && foundClient) {
+    foundClient.active = true;
+    foundClient
+      .save()
+      .then(() => {
+        return res.status(200).json({
+          message: `activateAccount_success`,
+        });
+      })
+      .catch(() => {
+        return res.status(400).json({
+          message: `activateAccount_fail`,
+        });
+      });
+  } else {
+    return res.status(500).json({
+      message: `Server error - same email ${decoded.email} used for a user and a client`,
+    });
+  }
+};
+
 module.exports = {
   login,
   logout,
+  activate,
   refresh,
 };
