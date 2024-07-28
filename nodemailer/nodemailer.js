@@ -29,7 +29,7 @@ async function sendActivationEmail(fullname, email, activationLink, locale) {
   const p2 = inPolish
     ? "Proszę kliknąć w poniższy link."
     : "Please click on the link below.";
-  const anchor = inPolish ? "Aktywuj konto" : "Activate the acco`unt";
+  const anchor = inPolish ? "Aktywuj konto" : "Activate the account";
 
   const info = await transporter.sendMail({
     from: '"FeAST" <feast.234693@gmail.com>', // sender address
